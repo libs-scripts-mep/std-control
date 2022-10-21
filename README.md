@@ -8,7 +8,7 @@ Abra o terminal, e na pasta do script, execute:
 
 ```npm i @libs-scripts-mep/std-control```
 
-Após fianlizada a instalação da biblioteca, inclua em seu html:
+Após finalizada a instalação da biblioteca, inclua em seu html:
 
 ```html
 <script src="node_modules/@libs-scripts-mep/std-control/std-control.js"></script>
@@ -33,16 +33,21 @@ Após fianlizada a instalação da biblioteca, inclua em seu html:
 
 class SmartTestDeviceControl {
     /**
+     * 
      * @param {Array} releSobe array contendo o rele responsavel por fazer a base subir o motor
      * @param {Array} releDesce array contendo o rele responsavel por fazer a base descer o motor
      * @param {string} fimDeCursoSuperior string informando a entrada relacionada ao fim de curso superior
      * @param {string} fimDeCursoInferior string informando a entrada relacionada ao fim de curso inferior
+     * @param {string} bimanual string informando a entrada relacionada ao bimanual
+     * @param {string} emergencia string informando a entrada relacionada a emergencia
      */
-    constructor(releSobe, releDesce, fimDeCursoSuperior, fimDeCursoInferior) {
+    constructor(releSobe, releDesce, fimDeCursoSuperior, fimDeCursoInferior, bimanual, emergencia) {
         this.ReleSobe = releSobe
         this.ReleDesce = releDesce
         this.FimDeCursoInferior = fimDeCursoInferior
         this.FimDeCursoSuperior = fimDeCursoSuperior
+        this.Bimanual = bimanual
+        this.Emergencia = emergencia
     }
 
     /**
@@ -97,13 +102,31 @@ class SmartTestDeviceControl {
      * @param {string} entrada 
      * @param {number} interval 
      */
-    ObserverEmergencia(entrada, interval) {
-        let monitor = setInterval(() => {
-            if (entrada) {
+    ObserverEmergencia(entrada = this.Emergencia, interval = 300) {
+
+        setInterval(() => {
+            if (!pvi.daq.in[entrada].value) {
                 pvi.runInstructionS("RESET", [])
                 location.reload()
             }
         }, interval)
+    }
+
+    /**
+     * Inicia monitoramento da entrada informada, caso desacionada, trava a execução do script
+     *  
+     * @param {string} entrada 
+     * @param {number} interval 
+     */
+    ObserverBimanual(callback, entrada = this.Bimanual, interval = 300, timeout = 15000, nivelLogico = true) {
+
+        if (pvi.daq.in[entrada].value == nivelLogico) {
+            callback(true)
+        }
+
+        setTimeout(() => {
+            callback(false)
+        }, timeout)
     }
 }
 
@@ -116,25 +139,21 @@ class SmartTestDeviceControl {
 
 class Main {
     constructor() {
-        this.STD = new SmartTestDeviceControl([1], [3], "ac5", "ac6")
+        this.STD = new SmartTestDeviceControl([1], [3], "ac5", "ac6", "dc2", "dc1")
     }
 
-	MaquinaDeEstados(estado) {
-		switch (estado) {
+    MaquinaDeEstados(estado) {
+        switch (estado) {
 
             case "Bimanual":
-                UI.setMsg("Coloque o controlador na base e pressione o bi-manual.")
+                UI.setMsg("Coloque o controlador na base e pressione o bimanual.")
 
                 //verifica se o motor está na posição inicial
                 if (pvi.daq.in[this.STD.FimDeCursoSuperior].value) {
 
-                    let aguardaBimanual = setInterval(() => {
-
-                        //aguarda acionamento do bimanual para atuar no motor
-                        if (pvi.daq.in[entradaBimanual].value) {
-                            
-                            clearInterval(aguardaBimanual)
-                            clearTimeout(timeOutBimanual)
+                    //aguarda acionamento do bimanual para atuar no motor
+                    this.STD.ObserverBimanual((retornoBimanual) => {
+                        if (retornoBimanual) {
 
                             //Atua na descida do motor
                             this.STD.DesceMotor((retornoDescida) => {
@@ -147,14 +166,11 @@ class Main {
                                     //segue o teste..
                                 }
                             })
+                        } else {
+                            //seta as devidas falhas
+                            //segue o teste..
                         }
-                    }, 100)
-
-                    let timeOutBimanual = setTimeout(() => {
-                        clearInterval(aguardaBimanual)
-                        //seta as devidas falhas
-                        //segue o teste..
-                    }, timeOut)
+                    })
 
                 } else {
 
@@ -165,7 +181,7 @@ class Main {
 
                             //chama novamente o mesmo estado para iniciar o teste
                             this.MaquinaDeEstados(MaqEstado.Att(this.Estados, "Executar"))
-                            
+
                         } else {
                             //seta as devidas falhas
                             //segue o teste..
@@ -173,7 +189,7 @@ class Main {
                     })
                 }
                 break
-		}
-	}
+        }
+    }
 }
 ```
