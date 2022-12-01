@@ -23,25 +23,27 @@ class SmartTestDeviceControl {
      * @param {function} callback 
      * @param {number} timeOut 
      */
-    DesceMotor(callback, timeOut = 5000) {
+    DesceMotor(callback, timeOut = 5000, nivelLogico = true) {
 
-        Reles.LigaReles(this.ReleDesce, () => {
-            let aguardaFechamento = setInterval(() => {
-                if (pvi.daq.in[this.FimDeCursoInferior].value) {
-                    clearInterval(aguardaFechamento)
-                    clearTimeout(timeOutFechamento)
-                    Reles.LigaReles([], () => {
-                        callback(true)
-                    })
+        let aguardaFechamento = setInterval(() => {
+            if (pvi.daq.in[this.FimDeCursoInferior].value == nivelLogico) {
+                clearInterval(aguardaFechamento)
+                clearTimeout(timeOutFechamento)
+                pvi.daq.desligaRele(this.ReleDesce)
+                callback(true)
+            } else {
+                if (pvi.daq.in[this.Bimanual].value == true) {
+                    pvi.daq.ligaRele(this.ReleDesce)
+                } else {
+                    pvi.daq.desligaRele(this.ReleDesce)
                 }
+            }
             }, 100)
             let timeOutFechamento = setTimeout(() => {
                 clearInterval(aguardaFechamento)
-                Reles.LigaReles([], () => {
-                    callback(false)
-                })
+                pvi.daq.desligaRele(this.ReleDesce)
+                callback(false)
             }, timeOut)
-        })
     }
 
     /**
@@ -50,27 +52,24 @@ class SmartTestDeviceControl {
      * @param {function} callback 
      * @param {number} timeOut 
      */
-    SobeMotor(callback, timeOut = 5000) {
+    SobeMotor(callback, timeOut = 5000, nivelLogico = true) {
 
-        Reles.LigaReles(this.ReleSobe, () => {
-
-            let aguardaFechamento = setInterval(() => {
-                if (pvi.daq.in[this.FimDeCursoSuperior].value) {
-                    clearInterval(aguardaFechamento)
-                    clearTimeout(timeOutFechamento)
-                    Reles.LigaReles([], () => {
-                        callback(true)
-                    })
-                }
-            }, 100)
-
-            let timeOutFechamento = setTimeout(() => {
+        let aguardaFechamento = setInterval(() => {
+            if (pvi.daq.in[this.FimDeCursoSuperior].value == nivelLogico) {
                 clearInterval(aguardaFechamento)
-                Reles.LigaReles([], () => {
-                    callback(false)
-                })
-            }, timeOut)
-        })
+                clearTimeout(timeOutFechamento)
+                pvi.daq.desligaRele(this.ReleSobe)
+                callback(true)
+            } else {
+                pvi.daq.ligaRele(this.ReleSobe)
+            } 
+        }, 100)
+
+        let timeOutFechamento = setTimeout(() => {
+            clearInterval(aguardaFechamento)
+            pvi.daq.desligaRele(this.ReleSobe)
+            callback(false)
+        }, timeOut)
     }
 
     /**
@@ -96,7 +95,7 @@ class SmartTestDeviceControl {
     }
 
     /**
-     * Inicia monitoramento da entrada informada, caso desacionada, trava a execução do script
+     * Inicia monitoramento da entrada informada
      *  
      * @param {string} entrada 
      * @param {number} interval 
@@ -104,11 +103,9 @@ class SmartTestDeviceControl {
     ObserverBimanual(callback, entrada = this.Bimanual, interval = 300, timeout = 15000, nivelLogico = true) {
 
         let monitor = setInterval(() => {
-
-            clearInterval(monitor)
-            clearTimeout(timeOutMoonitor)
-
             if (pvi.daq.in[entrada].value == nivelLogico) {
+                clearInterval(monitor)
+                clearTimeout(timeOutMoonitor)
                 callback(true)
             }
 
