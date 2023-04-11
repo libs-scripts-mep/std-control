@@ -42,12 +42,14 @@ class SmartTestDeviceControl {
      * @param {string} emergencia string informando a entrada relacionada a emergencia
      */
     constructor(releSobe, releDesce, fimDeCursoSuperior, fimDeCursoInferior, bimanual, emergencia) {
-        this.ReleSobe = releSobe
-        this.ReleDesce = releDesce
         this.FimDeCursoInferior = fimDeCursoInferior
         this.FimDeCursoSuperior = fimDeCursoSuperior
-        this.Bimanual = bimanual
         this.Emergencia = emergencia
+        this.ReleDesce = releDesce
+        this.ReleSobe = releSobe
+        this.Bimanual = bimanual
+
+        this.EmergenciaAcionada = false
     }
 
     /**
@@ -174,12 +176,12 @@ class Main {
 
                 } else {
 
-                    //Atua na subida do motor para colocar no estado inicial
+                    //Atua na subida do motor
                     this.STD.SobeMotor((retornoSubida) => {
 
                         if (retornoSubida) {
 
-                            //chama novamente o mesmo estado para iniciar o teste
+                            //promove recursão do estado
                             this.MaquinaDeEstados(MaqEstado.Att(this.Estados, "Executar"))
 
                         } else {

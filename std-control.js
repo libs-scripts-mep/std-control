@@ -9,12 +9,14 @@ class SmartTestDeviceControl {
      * @param {string} emergencia string informando a entrada relacionada a emergencia
      */
     constructor(releSobe, releDesce, fimDeCursoSuperior, fimDeCursoInferior, bimanual, emergencia) {
-        this.ReleSobe = releSobe
-        this.ReleDesce = releDesce
         this.FimDeCursoInferior = fimDeCursoInferior
         this.FimDeCursoSuperior = fimDeCursoSuperior
-        this.Bimanual = bimanual
         this.Emergencia = emergencia
+        this.ReleDesce = releDesce
+        this.ReleSobe = releSobe
+        this.Bimanual = bimanual
+
+        this.EmergenciaAcionada = false
     }
 
     /**
@@ -32,18 +34,19 @@ class SmartTestDeviceControl {
                 pvi.daq.desligaRele(this.ReleDesce)
                 callback(true)
             } else {
-                if (pvi.daq.in[this.Bimanual].value == true) {
+                if (pvi.daq.in[this.Bimanual].value == true && !this.EmergenciaAcionada) {
                     pvi.daq.ligaRele(this.ReleDesce)
                 } else {
                     pvi.daq.desligaRele(this.ReleDesce)
                 }
             }
-            }, 100)
-            let timeOutFechamento = setTimeout(() => {
-                clearInterval(aguardaFechamento)
-                pvi.daq.desligaRele(this.ReleDesce)
-                callback(false)
-            }, timeOut)
+        }, 100)
+
+        let timeOutFechamento = setTimeout(() => {
+            clearInterval(aguardaFechamento)
+            pvi.daq.desligaRele(this.ReleDesce)
+            callback(false)
+        }, timeOut)
     }
 
     /**
@@ -55,14 +58,22 @@ class SmartTestDeviceControl {
     SobeMotor(callback, timeOut = 5000, nivelLogico = true) {
 
         let aguardaFechamento = setInterval(() => {
-            if (pvi.daq.in[this.FimDeCursoSuperior].value == nivelLogico) {
+            if (this.EmergenciaAcionada) {
+
+                console.error("Emergência acionada - Subida do motor interrompida!")
                 clearInterval(aguardaFechamento)
                 clearTimeout(timeOutFechamento)
+
+            } else if (pvi.daq.in[this.FimDeCursoSuperior].value == nivelLogico) {
+
+                clearInterval(aguardaFechamento)
+                clearTimeout(timeOutFechamento)
+
                 pvi.daq.desligaRele(this.ReleSobe)
                 callback(true)
             } else {
                 pvi.daq.ligaRele(this.ReleSobe)
-            } 
+            }
         }, 100)
 
         let timeOutFechamento = setTimeout(() => {
@@ -80,17 +91,22 @@ class SmartTestDeviceControl {
      * @param {string} entrada 
      * @param {number} interval 
      */
-    ObserverEmergencia(entrada = this.Emergencia, interval = 300) {
+    ObserverEmergencia(entrada = this.Emergencia, interval = 200, callback = null) {
 
         let monitor = setInterval(() => {
 
             if (!pvi.daq.in[entrada].value) {
                 clearInterval(monitor)
-                pvi.runInstructionS("RESET", [])
-                alert("EMERGÊNCIA ACIONADA\n\nClique em OK para reinciar o teste")
-                location.reload()
-            }
+                this.EmergenciaAcionada = true
 
+                if (callback != null && typeof (callback) === "function") {
+                    callback()
+                } else {
+                    pvi.runInstructionS("RESET", [])
+                    alert("EMERGÊNCIA ACIONADA\n\nClique em OK para reinciar o teste")
+                    location.reload()
+                }
+            }
         }, interval)
     }
 
@@ -108,7 +124,6 @@ class SmartTestDeviceControl {
                 clearTimeout(timeOutMoonitor)
                 callback(true)
             }
-
         }, interval)
 
         let timeOutMoonitor = setTimeout(() => {
