@@ -1,134 +1,134 @@
-class SmartTestDeviceControl {
+class SmartTestDevice {
     /**
      * 
-     * @param {Array} releSobe array contendo o rele responsavel por fazer a base subir o motor
-     * @param {Array} releDesce array contendo o rele responsavel por fazer a base descer o motor
-     * @param {string} fimDeCursoSuperior string informando a entrada relacionada ao fim de curso superior
-     * @param {string} fimDeCursoInferior string informando a entrada relacionada ao fim de curso inferior
-     * @param {string} bimanual string informando a entrada relacionada ao bimanual
-     * @param {string} emergencia string informando a entrada relacionada a emergencia
+     * @param {Array} UpRelay array contendo o rele responsavel por fazer a base subir o motor
+     * @param {Array} DownRelay array contendo o rele responsavel por fazer a base descer o motor
+     * @param {string} TopLimitSwitch string informando a entrada relacionada ao fim de curso superior
+     * @param {string} BottomLimitSwitch string informando a entrada relacionada ao fim de curso inferior
+     * @param {string} Bimanual string informando a entrada relacionada ao Bimanual
+     * @param {string} Emergency string informando a entrada relacionada a Emergency
      */
-    constructor(releSobe, releDesce, fimDeCursoSuperior, fimDeCursoInferior, bimanual, emergencia) {
-        this.FimDeCursoInferior = fimDeCursoInferior
-        this.FimDeCursoSuperior = fimDeCursoSuperior
-        this.Emergencia = emergencia
-        this.ReleDesce = releDesce
-        this.ReleSobe = releSobe
+    constructor(upRelay, downRelay, topLimitSwitch, bottomLimitSwitch, bimanual, emergency) {
+        this.BottomLimitSwitch = bottomLimitSwitch
+        this.TopLimitSwitch = topLimitSwitch
+        this.Emergency = emergency
+        this.DownRelay = downRelay
+        this.UpRelay = upRelay
         this.Bimanual = bimanual
-
-        this.EmergenciaAcionada = false
+        this.EmergencyTriggered = false
     }
 
-    /**
-     * Atua na descida do motor, até identificar o acionamento do fim de curso, ou estouro de timeout.
-     * 
-     * @param {function} callback 
-     * @param {number} timeOut 
-     */
-    DesceMotor(callback, timeOut = 5000, nivelLogico = true) {
+    static MOVING_TIMEOUT = "Motor demorou para chegar ao destino"
+    static MOVING_SUCESS = "Motor atuou como esperado"
+    static MOVING_INTERRUPT = "Movimentação do motor interrompida!"
 
-        let aguardaFechamento = setInterval(() => {
-            if (pvi.daq.in[this.FimDeCursoInferior].value == nivelLogico) {
-                clearInterval(aguardaFechamento)
-                clearTimeout(timeOutFechamento)
-                pvi.daq.desligaRele(this.ReleDesce)
-                callback(true)
-            } else {
-                if (pvi.daq.in[this.Bimanual].value == true && !this.EmergenciaAcionada) {
-                    pvi.daq.ligaRele(this.ReleDesce)
+    static BIMANUAL_TIMEOUT = "Bimanual não detectado dentro do tempo esperado"
+    static BIMANUAL_TRIGGERED = "Entrada bimanual detectada"
+    static BIMANUAL_ALWAYS_TRIGGERED = "Entrada bimanual sempre acionada"
+
+    static EMERGENCY_TRIGGERED = "Emergência acionada!"
+    static EMERGENCY_ALWAYS_TRIGGERED = "Emergência smpre acionada!"
+
+    async MoveDown(timeOut = 5000, expectedLevel = false) {
+
+        return new Promise((resolve) => {
+
+            let awaitsMoving = setInterval(() => {
+                if (this.EmergencyTriggered) {
+
+                    clearInterval(awaitsMoving)
+                    clearTimeout(movingTimeOut)
+                    pvi.daq.desligaRele(this.UpRelay)
+                    resolve({ result: false, msg: this.MOVING_INTERRUPT })
+
+                } else if (pvi.daq.in[this.BottomLimitSwitch].value == expectedLevel) {
+                    clearInterval(awaitsMoving)
+                    clearTimeout(movingTimeOut)
+                    pvi.daq.desligaRele(this.DownRelay)
+                    resolve({ result: true, msg: this.MOVING_SUCESS })
+
                 } else {
-                    pvi.daq.desligaRele(this.ReleDesce)
+                    if (pvi.daq.in[this.Bimanual].value == true) {
+                        pvi.daq.ligaRele(this.DownRelay)
+                    } else {
+                        pvi.daq.desligaRele(this.DownRelay)
+                    }
                 }
-            }
-        }, 100)
+            }, 100)
 
-        let timeOutFechamento = setTimeout(() => {
-            clearInterval(aguardaFechamento)
-            pvi.daq.desligaRele(this.ReleDesce)
-            callback(false)
-        }, timeOut)
+            let movingTimeOut = setTimeout(() => {
+                clearInterval(awaitsMoving)
+                pvi.daq.desligaRele(this.DownRelay)
+                resolve({ result: false, msg: this.MOVING_TIMEOUT })
+            }, timeOut)
+        })
+
     }
 
-    /**
-     * Atua na subida do motor, até identificar o acionamento do fim de curso, ou estouro de timeout.
-     * 
-     * @param {function} callback 
-     * @param {number} timeOut 
-     */
-    SobeMotor(callback, timeOut = 5000, nivelLogico = true) {
+    async MoveUp(timeOut = 5000, expectedLevel = false) {
 
-        let aguardaFechamento = setInterval(() => {
-            if (this.EmergenciaAcionada) {
+        return new Promise((resolve) => {
+            let awaitsMoving = setInterval(() => {
+                if (this.EmergencyTriggered) {
 
-                console.error("Emergência acionada - Subida do motor interrompida!")
-                clearInterval(aguardaFechamento)
-                clearTimeout(timeOutFechamento)
+                    clearInterval(awaitsMoving)
+                    clearTimeout(movingTimeOut)
+                    pvi.daq.desligaRele(this.UpRelay)
+                    resolve({ result: false, msg: this.MOVING_INTERRUPT })
 
-            } else if (pvi.daq.in[this.FimDeCursoSuperior].value == nivelLogico) {
+                } else if (pvi.daq.in[this.TopLimitSwitch].value == expectedLevel) {
 
-                clearInterval(aguardaFechamento)
-                clearTimeout(timeOutFechamento)
+                    clearInterval(awaitsMoving)
+                    clearTimeout(movingTimeOut)
 
-                pvi.daq.desligaRele(this.ReleSobe)
-                callback(true)
-            } else {
-                pvi.daq.ligaRele(this.ReleSobe)
-            }
-        }, 100)
-
-        let timeOutFechamento = setTimeout(() => {
-            clearInterval(aguardaFechamento)
-            pvi.daq.desligaRele(this.ReleSobe)
-            callback(false)
-        }, timeOut)
-    }
-
-    /**
-     * Inicia monitoramento da entrada informada, caso desacionada, trava a execução do script
-     * 
-     * OBS: por segurança, só é aceito no monitoramento o DESACIONAMENTO da entrada.
-     * 
-     * @param {string} entrada 
-     * @param {number} interval 
-     */
-    ObserverEmergencia(entrada = this.Emergencia, interval = 200, callback = null) {
-
-        let monitor = setInterval(() => {
-
-            if (!pvi.daq.in[entrada].value) {
-                clearInterval(monitor)
-                this.EmergenciaAcionada = true
-
-                if (callback != null && typeof (callback) === "function") {
-                    callback()
+                    pvi.daq.desligaRele(this.UpRelay)
+                    resolve({ result: true, msg: this.MOVING_SUCESS })
                 } else {
-                    pvi.runInstructionS("RESET", [])
-                    alert("EMERGÊNCIA ACIONADA\n\nClique em OK para reinciar o teste")
-                    location.reload()
+                    pvi.daq.ligaRele(this.UpRelay)
                 }
-            }
-        }, interval)
+            }, 100)
+
+            let movingTimeOut = setTimeout(() => {
+                clearInterval(awaitsMoving)
+                pvi.daq.desligaRele(this.UpRelay)
+                resolve({ result: false, msg: this.MOVING_TIMEOUT })
+            }, timeOut)
+        })
     }
 
-    /**
-     * Inicia monitoramento da entrada informada
-     *  
-     * @param {string} entrada 
-     * @param {number} interval 
-     */
-    ObserverBimanual(callback, entrada = this.Bimanual, interval = 300, timeout = 15000, nivelLogico = true) {
+    async BimanualObserver(input = this.Bimanual, timeout = 15000, expectedLevel = true) {
+        return new Promise((resolve) => {
+            if (pvi.daq.in[input].value == !expectedLevel) {
 
-        let monitor = setInterval(() => {
-            if (pvi.daq.in[entrada].value == nivelLogico) {
-                clearInterval(monitor)
-                clearTimeout(timeOutMoonitor)
-                callback(true)
+                pvi.daq.in[input].onChange = (logicLevel) => {
+                    if (logicLevel == expectedLevel) {
+                        clearTimeout(timeOutMonitor)
+                        resolve({ result: true, msg: this.BIMANUAL_TRIGGERED })
+                    }
+                }
+            } else {
+                resolve({ result: false, msg: this.BIMANUAL_ALWAYS_TRIGGERED })
             }
-        }, interval)
 
-        let timeOutMoonitor = setTimeout(() => {
-            clearInterval(monitor)
-            callback(false)
-        }, timeout)
+            const timeOutMonitor = setTimeout(() => {
+                pvi.daq.in[input].onChange = () => { }
+                resolve({ result: false, msg: this.BIMANUAL_TIMEOUT })
+            }, timeout)
+        })
+    }
+
+    async EmergencyObserver(input = this.Emergency) {
+        return new Promise((resolve) => {
+            if (pvi.daq.in[input].value == true) {
+                pvi.daq.in[input].onChange = (logicLevel) => {
+                    if (logicLevel == false) {
+                        this.EmergencyTriggered = true
+                        resolve({ triggered: true, msg: this.EMERGENCY_TRIGGERED })
+                    }
+                }
+            } else {
+                resolve({ triggered: false, msg: this.EMERGENCY_ALWAYS_TRIGGERED })
+            }
+        })
     }
 }
