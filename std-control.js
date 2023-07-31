@@ -27,7 +27,7 @@ class SmartTestDevice {
     static BIMANUAL_ALWAYS_TRIGGERED = "Entrada bimanual sempre acionada"
 
     static EMERGENCY_TRIGGERED = "Emergência acionada!"
-    static EMERGENCY_ALWAYS_TRIGGERED = "Emergência smpre acionada!"
+    static EMERGENCY_ALWAYS_TRIGGERED = "Emergência sempre acionada!"
 
     async MoveDown(timeOut = 5000, expectedLevel = false) {
 
@@ -39,13 +39,13 @@ class SmartTestDevice {
                     clearInterval(awaitsMoving)
                     clearTimeout(movingTimeOut)
                     pvi.daq.desligaRele(this.UpRelay)
-                    resolve({ result: false, msg: this.MOVING_INTERRUPT })
+                    resolve({ result: false, msg: SmartTestDevice.MOVING_INTERRUPT })
 
                 } else if (pvi.daq.in[this.BottomLimitSwitch].value == expectedLevel) {
                     clearInterval(awaitsMoving)
                     clearTimeout(movingTimeOut)
                     pvi.daq.desligaRele(this.DownRelay)
-                    resolve({ result: true, msg: this.MOVING_SUCESS })
+                    resolve({ result: true, msg: SmartTestDevice.MOVING_SUCESS })
 
                 } else {
                     if (pvi.daq.in[this.Bimanual].value == true) {
@@ -59,7 +59,7 @@ class SmartTestDevice {
             let movingTimeOut = setTimeout(() => {
                 clearInterval(awaitsMoving)
                 pvi.daq.desligaRele(this.DownRelay)
-                resolve({ result: false, msg: this.MOVING_TIMEOUT })
+                resolve({ result: false, msg: SmartTestDevice.MOVING_TIMEOUT })
             }, timeOut)
         })
 
@@ -74,7 +74,7 @@ class SmartTestDevice {
                     clearInterval(awaitsMoving)
                     clearTimeout(movingTimeOut)
                     pvi.daq.desligaRele(this.UpRelay)
-                    resolve({ result: false, msg: this.MOVING_INTERRUPT })
+                    resolve({ result: false, msg: SmartTestDevice.MOVING_INTERRUPT })
 
                 } else if (pvi.daq.in[this.TopLimitSwitch].value == expectedLevel) {
 
@@ -82,7 +82,7 @@ class SmartTestDevice {
                     clearTimeout(movingTimeOut)
 
                     pvi.daq.desligaRele(this.UpRelay)
-                    resolve({ result: true, msg: this.MOVING_SUCESS })
+                    resolve({ result: true, msg: SmartTestDevice.MOVING_SUCESS })
                 } else {
                     pvi.daq.ligaRele(this.UpRelay)
                 }
@@ -91,7 +91,7 @@ class SmartTestDevice {
             let movingTimeOut = setTimeout(() => {
                 clearInterval(awaitsMoving)
                 pvi.daq.desligaRele(this.UpRelay)
-                resolve({ result: false, msg: this.MOVING_TIMEOUT })
+                resolve({ result: false, msg: SmartTestDevice.MOVING_TIMEOUT })
             }, timeOut)
         })
     }
@@ -103,16 +103,16 @@ class SmartTestDevice {
                 pvi.daq.in[input].onChange = (logicLevel) => {
                     if (logicLevel == expectedLevel) {
                         clearTimeout(timeOutMonitor)
-                        resolve({ result: true, msg: this.BIMANUAL_TRIGGERED })
+                        resolve({ result: true, msg: SmartTestDevice.BIMANUAL_TRIGGERED })
                     }
                 }
             } else {
-                resolve({ result: false, msg: this.BIMANUAL_ALWAYS_TRIGGERED })
+                resolve({ result: false, msg: SmartTestDevice.BIMANUAL_ALWAYS_TRIGGERED })
             }
 
             const timeOutMonitor = setTimeout(() => {
                 pvi.daq.in[input].onChange = () => { }
-                resolve({ result: false, msg: this.BIMANUAL_TIMEOUT })
+                resolve({ result: false, msg: SmartTestDevice.BIMANUAL_TIMEOUT })
             }, timeout)
         })
     }
@@ -123,11 +123,11 @@ class SmartTestDevice {
                 pvi.daq.in[input].onChange = (logicLevel) => {
                     if (logicLevel == false) {
                         this.EmergencyTriggered = true
-                        resolve({ triggered: true, msg: this.EMERGENCY_TRIGGERED })
+                        resolve({ triggered: true, msg: SmartTestDevice.EMERGENCY_TRIGGERED })
                     }
                 }
             } else {
-                resolve({ triggered: false, msg: this.EMERGENCY_ALWAYS_TRIGGERED })
+                resolve({ triggered: false, msg: SmartTestDevice.EMERGENCY_ALWAYS_TRIGGERED })
             }
         })
     }
