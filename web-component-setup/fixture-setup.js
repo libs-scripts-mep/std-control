@@ -8,7 +8,8 @@ export class FixtureSetup extends HTMLElement {
     }
 
     build() {
-        this.shadowRoot.innerHTML = `
+        this.attachShadow({ mode: "open" })
+        this.shadowRoot.innerHTML = /*html*/`
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/siimple@3.3.1/dist/siimple.min.css">
         <link rel="stylesheet" href="node_modules/@libs-scripts-mep/std-control/web-component-setup/fixture-setup.css">
 
@@ -21,10 +22,10 @@ export class FixtureSetup extends HTMLElement {
                     style>
             </div>
             <div id="textInformation_modalDark"></div>
-            <div class = "divButtons">            
+            <div class = "divButtons" id = "divButtons">            
                 <div id="divButtonSkip" class = "divButtons" >
                     <span id="spanDontSkip">
-                        <span class="icon" tabindex="0" id:"iconSpan">
+                        <span class="icon" tabindex="0" id = "iconSpan">
                             <img src="node_modules/@libs-scripts-mep/std-control/web-component-setup/images/attention.png">
                         </span>
                         <span class="info" id="infoSpan"></span>
@@ -58,9 +59,9 @@ export class FixtureSetup extends HTMLElement {
     showSpan() { return this.shadowRoot.getElementById("spanDontSkip").style.display = "" }
 
     changeInfoSpan(text = "") { return this.shadowRoot.getElementById("infoSpan").innerText = text }
-    
-    changeIconSpan(image ="node_modules/@libs-scripts-mep/std-control/web-component-setup/images/attention.png"){ return this.shadowRoot.getElementById("iconSpan").src = image }
-    
+
+    changeIconSpan(image = "node_modules/@libs-scripts-mep/std-control/web-component-setup/images/attention.png") { return this.shadowRoot.getElementById("iconSpan").src = image }
+
     async onKeyDown(expectedKey, toReturnValue) {
         return new Promise((resolve) => {
             document.addEventListener('keydown', (key) => {
@@ -99,9 +100,9 @@ export class FixtureSetup extends HTMLElement {
         html_modalDarkImg.src = img
         tittle != null ? textTitle_modalDark.innerText = tittle : null
         textInformation_modalDark.innerText = msg
-        
+
         await this.waitToRender(300)
-        
+
         this.show()
 
         const ClickAdvanc = this.onClick(buttonAdvance, true)
