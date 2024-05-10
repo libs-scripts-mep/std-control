@@ -1,3 +1,4 @@
+import { FixtureSetup } from "./web-component-setup/fixture-setup.js"
 /**
  * # Exemplos
  * 
@@ -222,5 +223,43 @@ export default class SmartTestDevice {
                 resolve({ triggered: false, msg: SmartTestDevice.EMERGENCY_ALWAYS_TRIGGERED })
             }
         })
+    }
+
+    /**
+ * Instruções para o setup do fixture superior da nova revisão mecânica
+ *
+ * @param {HTMLElement} [element=document.getElementsByTagName('main')[0]] - O elemento ao qual o setup do fixture será anexado. O padrão é o primeiro elemento 'main' no document.
+ * @return {Promise<Object>} Um objeto com o resultado da configuração e uma mensagem.
+ *   - result: Um booleano indicando o sucesso da configuração.
+ *   - msg: Uma mensagem em string descrevendo o resultado da configuração.
+ *
+ * @example
+ * const result = await SetupFixture();
+ * console.log(result); // { result: true, msg: "instrução bem sucedida" }
+ */
+    async SetupFixture(element = document.getElementsByTagName('main')[0]) {
+        const Setup = new FixtureSetup(element)
+        window.testeSetupFixture = Setup
+
+        Setup.changeInfoSpan("Pule esta instrução apenas se a jiga tiver a revisão mecânica da parte superior diferente da indicada na imagem")
+
+        const modalResult = await Setup.modalDark("node_modules/@libs-scripts-mep/std-control/web-component-setup/images/Fx_inferior.jpeg", "Coloque o fixture inferior no base \n\nem seguida pressione AVANÇAR")
+        if (modalResult == "skip") { return { result: true, msg: "Jiga com revisão antiga" } }
+
+        modalResult = await Setup.modalDark("node_modules/@libs-scripts-mep/std-control/web-component-setup/images/ajustaManipulo.gif", "Ajuste todos os manipulos para que fiquem paralelos ao arco,\n para fazer isso pressione o manipulo pra baixo e gire no sentido anti-horario, como na imagem.\n\nem seguida pressione AVANÇAR")
+        if (modalResult == "skip") { return { result: true, msg: "Jiga com revisão antiga" } }
+
+        Setup.hideDivButtonSkip()
+
+        Setup.hideButtons()
+        const moveDown = await Setup.modalDark("node_modules/@libs-scripts-mep/std-control/web-component-setup/images/manipulosPosicao.jpeg", "Certifique-se de que todos os maipulos estão paralelos ao arco e então PRESSIONE O BIMANUAL", undefined, this.MoveDown(240000))
+        if (!moveDown.result) { return moveDown }
+        Setup.showButtons()
+
+        await Setup.modalDark("node_modules/@libs-scripts-mep/std-control/web-component-setup/images/ajustaComFixture.gif", "Ajuste todos os manipulos para que prendam o fixture superior,\n para fazer isso pressione o manipulo pra baixo e gire no sentido horario, como na imagem.\n\nquando o fixture superior estiver preso, pressione AVANÇAR")
+        const moveUp = await this.MoveUp(10000)
+        if (!moveUp.result) { return moveUp }
+
+        return { result: true, msg: "instrução bem sucedida" }
     }
 }

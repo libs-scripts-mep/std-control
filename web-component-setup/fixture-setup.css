@@ -1,0 +1,107 @@
+
+
+.info {
+    font-size: 0.8rem;
+    width: 200px;
+    display: inline-block;
+    border: 1px solid black;
+    padding: 10px;
+    background: linear-gradient(to left top, #000, #686767) fixed;
+    border-radius: 10px;
+    opacity: 0;
+    transition: 0.6s all;
+    position: absolute;
+    bottom: 450px;
+    left: 100px;
+    z-index: 3;
+  }
+
+  img {
+    width: 1.2rem;
+  }
+
+  .icon:hover + .info, .icon:focus + .info {
+    opacity: 1;
+  }
+  
+.divButtons{
+    align-items: center;
+    display: flex;
+    justify-content: center;
+}
+     
+.buttonStyle {
+    margin: 0px 20px 0px 20px;
+    width: 150px;
+    height: fit-content;
+    padding: 10px;
+    font-size: 15px;
+    font-weight: bold;
+    font-family: 'Lato', sans-serif;
+    outline: none;
+    background: linear-gradient(to left top, #000, #686767) fixed;
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.829);
+    transition: all 0.5s;
+    cursor: pointer;
+    border-color: #535151;
+}
+.buttonStyle:hover {
+    border: 2px solid rgb(175, 16, 16);
+    background: linear-gradient(to left top, #000, #b3b3b3) fixed;
+}
+
+.buttonStyle:focus {
+    background: linear-gradient(to left top, #bbbbbb, #000) fixed;
+}
+
+
+
+#textInformation_modalDark {
+    word-break: break-word;
+    max-width: 800px;
+    font-size: 18px;
+    padding: 20px;
+    text-align: center;
+}
+
+#html_modalDarkImg {
+    max-height: 420px;
+    position: relative;
+    width: auto;
+    height: auto;
+}
+
+#html_modalDarkContent {
+    max-width: fit-content;
+    min-height: fit-content;
+    justify-items: center;
+    height: fit-content;
+    box-shadow: 0.5rem 0.5rem 0 rgba(138, 5, 5, 0.952);
+    background: #212121;
+    color: #fff;
+    padding: 20px;
+}
+
+#textTitle_modalDark {
+    font-size: 25px;
+    display: inline;
+    padding: 20px;
+}
+
+#html_modalDarkDisplay {
+    word-break: break-word;
+    max-width: 800px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+}
+
+
+#divmodalDark {
+    position: relative;
+    justify-content: center;
+    display: flex;
+    padding: 20px;
+}
+
