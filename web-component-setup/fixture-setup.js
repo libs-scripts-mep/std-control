@@ -23,15 +23,9 @@ export class FixtureSetup extends HTMLElement {
             </div>
             <div id="textInformation_modalDark"></div>
             <div class = "divButtons" id = "divButtons">            
-                <div id="divButtonSkip" class = "divButtons" >
-                    <span id="spanDontSkip">
-                        <span class="icon" tabindex="0" id = "iconSpan">
-                            <img src="node_modules/@libs-scripts-mep/std-control/web-component-setup/images/attention.png">
-                        </span>
-                        <span class="info" id="infoSpan"></span>
-                    </span>
-                    <input type="submit" class="buttonStyle" id="buttonSkip" value="Pular instruções">
-                    </div>
+                <div id="divButtonSkip"  title = "" class = "divButtons" >
+                    <input type="submit" class="buttonStyle" id="buttonSkip" value="⚠️ Pular instruções">
+                </div>
             <input type="submit" class="buttonStyle" id="buttonAdvance" value="Avançar">
             </div>
         
@@ -54,13 +48,7 @@ export class FixtureSetup extends HTMLElement {
 
     hideDivButtonSkip() { return this.shadowRoot.getElementById("divButtonSkip").style.display = "none" }
 
-    hideSpan() { return this.shadowRoot.getElementById("spanDontSkip").style.display = "none" }
-
-    showSpan() { return this.shadowRoot.getElementById("spanDontSkip").style.display = "" }
-
-    changeInfoSpan(text = "") { return this.shadowRoot.getElementById("infoSpan").innerText = text }
-
-    changeIconSpan(image = "node_modules/@libs-scripts-mep/std-control/web-component-setup/images/attention.png") { return this.shadowRoot.getElementById("iconSpan").src = image }
+    changeInfoSpan(text = "") { return this.shadowRoot.getElementById("divButtonSkip").title = text }
 
     async onKeyDown(expectedKey, toReturnValue) {
         return new Promise((resolve) => {
@@ -87,9 +75,10 @@ export class FixtureSetup extends HTMLElement {
      * @param {string} [msg=""] - The message to display in the modal.
      * @param {string|null} [tittle=null] - The title to display in the modal.
      * @param {Promise} externalTrigger - A promise that resolves when the modal should be closed.
-     * @return {Promise} A promise that resolves when the modal is closed.
+     * @param {boolean} [showButtons=true] - Whether to show the buttons in the modal.
+     * @return {Promise} A promise that resolves when the modal is closed. 
      */
-    async modalDark(img, msg = "", tittle = null, externalTrigger = new Promise(() => { })) {
+    async modalDark(img, msg = "", tittle = null, externalTrigger = new Promise(() => { }), showButtons = true) {
 
         const textTitle_modalDark = this.shadowRoot.getElementById("textTitle_modalDark")
         const html_modalDarkImg = this.shadowRoot.getElementById("html_modalDarkImg")
@@ -104,14 +93,19 @@ export class FixtureSetup extends HTMLElement {
         await this.waitToRender(300)
 
         this.show()
-
-        const ClickAdvanc = this.onClick(buttonAdvance, true)
-        const ClickSkip = this.onClick(buttonSkip, "skip")
-        const NumEnter = this.onKeyDown("NumpadEnter", true)
-        const Space = this.onKeyDown("Space", true)
-        const Enter = this.onKeyDown("Enter", true)
-
-        const winner = await Promise.race([ClickAdvanc, ClickSkip, Enter, NumEnter, Space, externalTrigger])
+        let winner
+        if (showButtons) {
+            this.showButtons()
+            const ClickAdvanc = this.onClick(buttonAdvance, true)
+            const ClickSkip = this.onClick(buttonSkip, "skip")
+            const NumEnter = this.onKeyDown("NumpadEnter", true)
+            const Space = this.onKeyDown("Space", true)
+            const Enter = this.onKeyDown("Enter", true)
+            winner = await Promise.race([ClickAdvanc, ClickSkip, Enter, NumEnter, Space, externalTrigger])
+        } else { 
+            this.hideButtons() 
+            winner = await externalTrigger
+        }
 
         this.hide()
         return winner
