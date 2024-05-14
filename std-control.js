@@ -3,7 +3,7 @@ import { FixtureSetup } from "./web-component-setup/fixture-setup.js"
  * # Exemplos
  * 
  * ```js
- * context.Std = new SmartTestDevice(1, 3, "dc4", "dc3", "dc2", "dc1")
+ * this.Std = new SmartTestDevice(1, 3, "dc4", "dc3", "dc2", "dc1")
  * ```
  */
 export default class SmartTestDevice {
@@ -226,18 +226,20 @@ export default class SmartTestDevice {
     }
 
     /**
- * Instruções para o setup do fixture superior da nova revisão mecânica
- *
- * @param {HTMLElement} [element=document.getElementsByTagName('main')[0]] - O elemento ao qual o setup do fixture será anexado. O padrão é o primeiro elemento 'main' no document.
- * @return {Promise<Object>} Um objeto com o resultado da configuração e uma mensagem.
- *   - result: Um booleano indicando o sucesso da configuração.
- *   - msg: Uma mensagem em string descrevendo o resultado da configuração.
- *
- * @example
- * const result = await SetupFixture();
- * console.log(result); // { result: true, msg: "instrução bem sucedida" }
- */
-    async SetupFixture(element = document.getElementsByTagName('main')[0]) {
+    * Instruções para o setup do fixture superior da nova revisão mecânica
+    *
+    * @param {HTMLElement} [element=document.getElementsByTagName('main')[0]] - O elemento ao qual o setup do fixture será anexado. O padrão é o primeiro elemento 'main' no document.
+    * @param {string} imgAlinhamento - OPCIONAL - Uma imagem para alinhamento do fixture.
+    * @param {string} msgAlinhamento - OPCIONAL - Uma mensagem para informando como fazer o alinhamento do fixture.
+    * @return {Promise<Object>} Um objeto com o resultado da configuração e uma mensagem.
+    *   - result: Um booleano indicando o sucesso da configuração.
+    *   - msg: Uma mensagem em string descrevendo o resultado da configuração.
+    *
+    * @example
+    * const result = await SetupFixture();
+    * console.log(result); // { result: true, msg: "instrução bem sucedida" }
+   */
+    async SetupFixture(element = document.getElementsByTagName('main')[0], imgAlinhamento, msgAlinhamento) {
         const Setup = new FixtureSetup(element)
         window.testeSetupFixture = Setup
         let emergencyAlwaysTriggered = false
@@ -253,32 +255,44 @@ export default class SmartTestDevice {
         }
 
         async function SetupModal(context) {
+            imgAlinhamento ??= `node_modules/@libs-scripts-mep/std-control/web-component-setup/images/encaixeAgulhas.jpeg`
+            msgAlinhamento ??= `Coloque a placa no fixture, em seguida, coloque o fixture superior em cima, caso o fixture tenha agulhas, 
+            alinhe o fixture de acordo com o encaixe das agulhas, como na imagem.\n\nem seguida clique em AVANÇAR ou pressione a tecla 'Enter'`
 
             const moveUpInitial = await context.MoveUp(8000)
             if (!moveUpInitial.result) { return moveUpInitial }
 
-            Setup.changeInfoSpan("⚠️ Pule esta instrução apenas se a jiga estiver utilizando \nalguma das jigas: BS-80.1, BS-80.2 e BS-80.3. ⚠️")
-            
-            if(emergencyAlwaysTriggered){ return }
-            let modalResult = await Setup.modalDark("node_modules/@libs-scripts-mep/std-control/web-component-setup/images/Fx_inferior.jpeg", "Coloque o fixture inferior na base.\n\nem seguida clique em AVANÇAR ou pressione a tecla 'Enter'")
-            if (modalResult == "skip") { return { result: true, msg: "Jiga com revisão antiga" } }
+            Setup.changeInfoSpan(`⚠️ Pule esta instrução apenas se a jiga que estiver utilizando for\nalguma das jigas: BS-80.1, BS-80.2 e BS-80.3. ⚠️`)
 
-            modalResult = await Setup.modalDark("node_modules/@libs-scripts-mep/std-control/web-component-setup/images/ajustaManipulo.gif", "Ajuste todos os manipulos para que fiquem paralelos ao arco,\n para fazer isso pressione o manipulo pra baixo e gire no sentido anti-horario, como no gif.\n\nem seguida clique em AVANÇAR ou pressione a tecla 'Enter'")
-            if (modalResult == "skip") { return { result: true, msg: "Jiga com revisão antiga" } }
+            if (emergencyAlwaysTriggered) { return }
 
-            modalResult = await Setup.modalDark("node_modules/@libs-scripts-mep/std-control/web-component-setup/images/encaixeAgulhas.jpeg", "Coloque o fixture superior em cima do fixture inferior, caso o fixture tenha agulhas, alinhe os fixtures de acordo com o encaixe das agulhas, como na imagem.\n\nem seguida clique em AVANÇAR ou pressione a tecla 'Enter'")
-            if (modalResult == "skip") { return { result: true, msg: "Jiga com revisão antiga" } }
+            let modalResult = await Setup.modalDark(`node_modules/@libs-scripts-mep/std-control/web-component-setup/images/Fx_inferior.jpeg`,
+                `⚠️ Pule esta instrução se estiver utilizando alguma\n das jigas: BS-80.1, BS-80.2 e BS-80.3. E faça o setup como normalmente. ⚠️
+                \n Coloque o fixture inferior na base.\n em seguida clique em AVANÇAR ou pressione a tecla 'Enter'`)
+            if (modalResult == "skip") { return { result: true, msg: `Jiga com revisão antiga` } }
+
+            modalResult = await Setup.modalDark(`node_modules/@libs-scripts-mep/std-control/web-component-setup/images/ajustaManipulo.gif`,
+                `Ajuste todos os manipulos para que fiquem paralelos ao arco,\n para fazer isso pressione o manipulo pra baixo e gire no sentido anti-horario, como no gif.
+                \n\nem seguida clique em AVANÇAR ou pressione a tecla 'Enter'`)
+            if (modalResult == "skip") { return { result: true, msg: `Jiga com revisão antiga` } }
+
+            modalResult = await Setup.modalDark(imgAlinhamento, msgAlinhamento)
+            if (modalResult == "skip") { return { result: true, msg: `Jiga com revisão antiga` } }
 
             Setup.hideDivButtonSkip()
-            
-            const moveDown = await Setup.modalDark("node_modules/@libs-scripts-mep/std-control/web-component-setup/images/manipulosPosicao.jpeg", "Certifique-se de que todos os maipulos estão paralelos ao arco e então PRESSIONE O BIMANUAL", undefined, context.MoveDown(240000), false)
+
+            const moveDown = await Setup.modalDark(`node_modules/@libs-scripts-mep/std-control/web-component-setup/images/manipulosPosicao.jpeg`,
+                `Certifique-se de que todos os maipulos estão paralelos ao arco e então PRESSIONE O BIMANUAL`, undefined, context.MoveDown(240000), false)
             if (!moveDown.result) { return moveDown }
-        
-            await Setup.modalDark("node_modules/@libs-scripts-mep/std-control/web-component-setup/images/ajustaComFixture.gif", "Ajuste todos os manipulos para que prendam o fixture superior,\n para fazer isso pressione o manipulo pra baixo e gire no sentido horario, como no gif.\n\nquando o fixture superior estiver preso, clique em AVANÇAR ou pressione a tecla 'Enter'")
+
+            await Setup.modalDark(`node_modules/@libs-scripts-mep/std-control/web-component-setup/images/ajustaComFixture.gif`,
+                `Ajuste todos os manipulos para que prendam o fixture superior,\n para fazer isso pressione o manipulo pra baixo e gire no sentido horario, como no gif.
+                \n\nquando o fixture superior estiver preso, clique em AVANÇAR ou pressione a tecla 'Enter'`)
+
             const moveUp = await context.MoveUp(10000)
             if (!moveUp.result) { return moveUp }
 
-            return { result: true, msg: "instrução bem sucedida" }
+            return { result: true, msg: `instrução bem sucedida` }
         }
     }
 }
