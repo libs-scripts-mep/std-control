@@ -1,26 +1,16 @@
-import { DAQRelay } from "../reles-daq/reles-daq.js"
+import Relays from "../reles-daq/relays.js"
+import { DAQ } from "../daq-fwlink/DAQ.js"
 import { FixtureSetup } from "./web-component-setup/fixture-setup.js"
 
-/**
- * @example
- * this.std = new SmartTestDevice(1, 3, "dc4", "dc3", "dc2", "dc1")
- */
 export default class SmartTestDevice {
-    constructor(upRelay, downRelay, topLimitSwitch, bottomLimitSwitch, bimanual, emergency) {
-        /**Entrada do DAQ referente ao acionamento da microchave que detecta o limite `inferior` da movimentação do motor */
-        this.BottomLimitSwitch = bottomLimitSwitch
-        /**Entrada do DAQ referente ao acionamento da microchave que detecta o limite `superior` da movimentação do motor */
-        this.TopLimitSwitch = topLimitSwitch
-        /**Entrada do DAQ referente ao botão de `emergência`*/
-        this.Emergency = emergency
-        /**Relé do DAQ referente ao comando de `descida` do motor*/
-        this.DownRelay = downRelay
-        /**Relé do DAQ referente ao comando de `subida` do motor*/
-        this.UpRelay = upRelay
-        /**Entrada do DAQ referente aos botões de comando `bimanual`*/
-        this.Bimanual = bimanual
-        /**Flag que disponibiliza status de acionamento do botão de `emergência`*/
-        this.EmergencyTriggered = false
+
+    static hardware = {
+        upRelay: 1,
+        downRelay: 3,
+        emergency: "dc1",
+        bimanual: "dc2",
+        bottomLimitSwitch: "dc3",
+        topLimitSwitch: "dc4"
     }
 
     static MOVING_TIMEOUT = "Motor demorou para chegar ao destino"
@@ -35,133 +25,75 @@ export default class SmartTestDevice {
     static EMERGENCY_ALWAYS_TRIGGERED = "Emergência sempre acionada!"
 
     /**
-     * 
-     * @param {Number} timeOut Tempo maximo em milissegundos para aguardar o movimento
-     * @param {boolean} expectedState Estado esperado do sensor do limite inferior quando o movimento for considerado concluido
-     * 
-     * @example
-     * const std = new SmartTestDevice(1, 3, "dc4", "dc3", "dc2", "dc1");
-     * const result = await std.MoveDown()
+     * Move o motor para baixo enquanto o bimanual estiver acionado
+     * @param {number} timeout 
+     * @param {boolean} expectedState 
      */
-    async MoveDown(timeOut = 5000, expectedState = false) {
-        const start = parseInt(performance.now())
+    static async moveDown(timeout = 5000, expectedState = false) {
+        let loopControl = true
+        setTimeout(() => loopControl = false, timeout)
 
-        while (true) {
-            const elapsedTime = parseInt(performance.now()) - start
+        while (loopControl) {
+            if (DAQ.in[this.hardware.bottomLimitSwitch].value === expectedState) return { result: true, msg: SmartTestDevice.MOVING_SUCESS }
 
-            if (elapsedTime > timeOut) {
-                DAQRelay.RemoveRelay(this.DownRelay)
-                await DAQRelay.TurnOn()
-                return { result: false, msg: SmartTestDevice.MOVING_TIMEOUT }
+            if (!DAQ.in[this.hardware.emergency].value) return { result: false, msg: SmartTestDevice.MOVING_INTERRUPT }
+
+            while (loopControl && DAQ.in[this.hardware.emergency].value && DAQ.in[this.hardware.bimanual].value && DAQ.in[this.hardware.bottomLimitSwitch].value !== expectedState) {
+                if (!Relays.enabledRelays.has(this.hardware.downRelay)) await Relays.enable(this.hardware.downRelay)
+                await this.delay(50)
             }
 
-            else if (this.EmergencyTriggered) {
-                DAQRelay.RemoveRelay(this.DownRelay)
-                await DAQRelay.TurnOn()
-                return { result: false, msg: SmartTestDevice.MOVING_INTERRUPT }
-            }
-
-            else if (DAQ.in[this.BottomLimitSwitch].value === expectedState) {
-                DAQRelay.RemoveRelay(this.DownRelay)
-                await DAQRelay.TurnOn()
-                return { result: true, msg: SmartTestDevice.MOVING_SUCESS }
-
-            } else {
-                if (DAQ.in[this.Bimanual].value) {
-                    DAQRelay.AddRelay(this.DownRelay)
-                    await DAQRelay.TurnOn()
-                } else {
-                    DAQRelay.RemoveRelay(this.DownRelay)
-                    await DAQRelay.TurnOn()
-                }
-            }
-            await SmartTestDevice.delay(50)
+            if (Relays.enabledRelays.has(this.hardware.downRelay)) await Relays.disable(this.hardware.downRelay)
+            await this.delay(50)
         }
+
+        return { result: false, msg: SmartTestDevice.MOVING_TIMEOUT }
     }
 
     /**
-     * @param {Number} timeOut Tempo máximo em milissegundos para aguardar o movimento.
-     * @param {boolean} expectedState O estado esperado do sensor do limite superior
-     * quando o movimento for considerado concluído.
-     *
-     * @example
-     * const std = new SmartTestDevice(1, 3, "dc4", "dc3", "dc2", "dc1");
-     * const moveResult = await std.MoveUp();
-     */
-    async MoveUp(timeOut = 5000, expectedState = false) {
-        const start = parseInt(performance.now())
+     * Move o motor para cima enquanto
+     * @param {number} timeout 
+     * @param {boolean} expectedState
+    */
+    static async moveUp(timeout = 5000, expectedState = false) {
+        let loopControl = true
+        setTimeout(() => loopControl = false, timeout)
 
-        while (true) {
-            const elapsedTime = parseInt(performance.now()) - start
+        while (loopControl) {
+            if (DAQ.in[this.hardware.topLimitSwitch].value === expectedState) return { result: true, msg: SmartTestDevice.MOVING_SUCESS }
 
-            if (elapsedTime > timeOut) {
-                DAQRelay.RemoveRelay(this.UpRelay)
-                await DAQRelay.TurnOn()
-                return { result: false, msg: SmartTestDevice.MOVING_TIMEOUT }
+            if (!DAQ.in[this.hardware.emergency].value) return { result: false, msg: SmartTestDevice.MOVING_INTERRUPT }
+
+            while (loopControl && DAQ.in[this.hardware.emergency].value && DAQ.in[this.hardware.topLimitSwitch].value !== expectedState) {
+                if (!Relays.enabledRelays.has(this.hardware.upRelay)) await Relays.enable(this.hardware.upRelay)
+                await this.delay(50)
             }
 
-            if (this.EmergencyTriggered) {
-                DAQRelay.RemoveRelay(this.UpRelay)
-                await DAQRelay.TurnOn()
-                return { result: false, msg: SmartTestDevice.MOVING_INTERRUPT }
-            }
-
-            if (DAQ.in[this.TopLimitSwitch].value === expectedState) {
-                DAQRelay.RemoveRelay(this.UpRelay)
-                await DAQRelay.TurnOn()
-                return { result: true, msg: SmartTestDevice.MOVING_SUCESS }
-            } else {
-                // Mantém o relé ligado enquanto o limite superior não for atingido
-                DAQRelay.AddRelay(this.UpRelay)
-                await DAQRelay.TurnOn()
-            }
-
-            await SmartTestDevice.delay(50)
+            if (Relays.enabledRelays.has(this.hardware.upRelay)) await Relays.disable(this.hardware.upRelay)
+            await this.delay(50)
         }
+
+        return { result: false, msg: SmartTestDevice.MOVING_TIMEOUT }
     }
 
-    /**
-     * @param {string} input O nome da entrada digital a ser observada.
-     * @param {number} timeoutMs Tempo máximo em milissegundos para aguardar a mudança de estado.
-     * @param {boolean} expectedStatus O nível lógico esperado (true ou false).
+    /** Monitora o acionamento do bimanual */
+    static async bimanualObserver(timeout = 15000) {
+        if (DAQ.in[this.hardware.bimanual].value) { return { result: false, msg: SmartTestDevice.BIMANUAL_ALWAYS_TRIGGERED } }
 
-     * @example
-     * // Espera até que o bimanual seja acionado (nível true) por até 15 segundos.
-     * const biman = await this.BimanualObserver();
-     */
-    async BimanualObserver(input = this.Bimanual, timeoutMs = 15000, expectedStatus = true) {
-        const start = parseInt(performance.now())
+        let loopControl = true
+        setTimeout(() => loopControl = false, timeout)
 
-        if (DAQ.in[input].value === expectedStatus) { return { result: false, msg: SmartTestDevice.BIMANUAL_ALWAYS_TRIGGERED } }
+        while (loopControl && !DAQ.in[this.hardware.bimanual].value) await this.delay(50)
 
-        while (true) {
-            const elapsedTime = parseInt(performance.now()) - start
-            if (elapsedTime > timeoutMs) { return { result: false, msg: SmartTestDevice.BIMANUAL_TIMEOUT } }
-            if (DAQ.in[input].value === expectedStatus) { return { result: true, msg: SmartTestDevice.BIMANUAL_TRIGGERED } }
-            await SmartTestDevice.delay(50)
-        }
+        return DAQ.in[this.hardware.bimanual].value ? { result: true, msg: this.BIMANUAL_TRIGGERED } : { result: false, msg: this.BIMANUAL_TIMEOUT }
     }
 
-    /**
-     * @param {string} input O nome da entrada digital a ser observada (chave em DAQ.in).
+    /** Monitora o acionamento da emergência */
+    static async emergencyObserver() {
+        if (DAQ.in[this.hardware.emergency].value === false) return { triggered: true, msg: this.EMERGENCY_ALWAYS_TRIGGERED }
 
-     * @example
-     * const resultadoEmergencia = await this.EmergencyObserver();
-     */
-    async EmergencyObserver(input = this.Emergency) {
-        if (DAQ.in[input].value === false) {
-            this.EmergencyTriggered = true
-            return { triggered: true, msg: SmartTestDevice.EMERGENCY_ALWAYS_TRIGGERED }
-        }
-
-        while (true) {
-            if (DAQ.in[input].value === false) {
-                this.EmergencyTriggered = true
-                return { triggered: true, msg: SmartTestDevice.EMERGENCY_TRIGGERED }
-            }
-
-            await SmartTestDevice.delay(50)
-        }
+        while (DAQ.in[this.hardware.emergency].value) await this.delay(50)
+        return { triggered: true, msg: this.EMERGENCY_TRIGGERED }
     }
 
     static async delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)) }
@@ -177,34 +109,29 @@ export default class SmartTestDevice {
     * const result = await SetupFixture();
     * console.log(result); // { result: true, msg: "instrução bem sucedida" }
     */
-    async SetupFixture(element = document.getElementsByTagName('main')[0], imgAlinhamento, msgAlinhamento) {
+    static async SetupFixture(element = document.getElementsByTagName('main')[0], imgAlinhamento, msgAlinhamento) {
         const Setup = new FixtureSetup(element)
 
         let emergencyAlwaysTriggered = false
-        const emergency = Emergency(this)
-        const result = await Promise.race([SetupModal(this), emergency])
+        const result = await Promise.race([SetupModal(), emergency()])
         Setup.hide()
         return result
 
-        /**
-         * @param {SmartTestDevice} std 
-         */
-        async function Emergency(std) {
-            const retornoEmergencia = await std.EmergencyObserver()
+        async function emergency() {
+            const retornoEmergencia = await SmartTestDevice.emergencyObserver()
             emergencyAlwaysTriggered = true
             return { result: false, msg: retornoEmergencia.msg }
         }
 
         /**
-         * @param {SmartTestDevice} std 
          * @return {Promise<{ result: boolean, msg: string }>}
          */
-        async function SetupModal(std) {
+        async function SetupModal() {
             imgAlinhamento ??= `node_modules/@libs-scripts-mep/std-control/web-component-setup/images/encaixeAgulhas.jpeg`
             msgAlinhamento ??= `Coloque a placa no fixture, em seguida, coloque o fixture superior em cima, caso o fixture tenha agulhas, 
             alinhe o fixture de acordo com o encaixe das agulhas, como na imagem.\n\nem seguida clique em AVANÇAR ou pressione a tecla 'Enter'`
 
-            const moveUpInitial = await std.MoveUp(8000)
+            const moveUpInitial = await SmartTestDevice.moveUp(8000)
             if (!moveUpInitial.result) { return moveUpInitial }
 
             Setup.changeInfoSpan(`⚠️ Pule esta instrução apenas se a jiga que estiver utilizando for\nalguma das bases: BS-80.1, BS-80.2 e BS-80.3. ⚠️`)
@@ -227,17 +154,22 @@ export default class SmartTestDevice {
             Setup.hideDivButtonSkip()
 
             const moveDown = await Setup.modalDark(`node_modules/@libs-scripts-mep/std-control/web-component-setup/images/manipulosPosicao.jpeg`,
-                `Certifique-se de que todos os maipulos estão paralelos ao arco e então PRESSIONE O BIMANUAL`, undefined, std.MoveDown(240000), false)
+                `Certifique-se de que todos os maipulos estão paralelos ao arco e então PRESSIONE O BIMANUAL`, undefined, SmartTestDevice.moveDown(240000), false)
             if (!moveDown.result) { return moveDown }
 
             await Setup.modalDark(`node_modules/@libs-scripts-mep/std-control/web-component-setup/images/ajustaComFixture.gif`,
                 `Ajuste todos os manipulos para que prendam o fixture superior,\n para fazer isso pressione o manipulo pra baixo e gire no sentido horario, como no gif.
                 \n\nquando o fixture superior estiver preso, clique em AVANÇAR ou pressione a tecla 'Enter'`)
 
-            const moveUp = await std.MoveUp(10000)
+            const moveUp = await SmartTestDevice.moveUp(10000)
             if (!moveUp.result) { return moveUp }
 
             return { result: true, msg: `instrução bem sucedida` }
         }
+    }
+
+    static {
+        window.STD = SmartTestDevice
+        Relays.addProhibitedCombination([this.hardware.upRelay, this.hardware.downRelay])
     }
 }
