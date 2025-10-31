@@ -22,5 +22,12 @@
   "bugs": {
     "url": "https://github.com/libs-scripts-mep/std-control/issues"
   },
-  "homepage": "https://github.com/libs-scripts-mep/std-control#readme"
+  "homepage": "https://github.com/libs-scripts-mep/std-control#readme",
+  "dependencies": {
+    "@libs-scripts-mep/ac9": "^1.0.1",
+    "@libs-scripts-mep/daq-fwlink": "^1.6.3",
+    "@libs-scripts-mep/reles-daq": "^4.0.2",
+    "@libs-scripts-mep/temp-sim": "^5.3.0",
+    "@libs-scripts-mep/vc9": "^1.2.0"
+  }
 }
